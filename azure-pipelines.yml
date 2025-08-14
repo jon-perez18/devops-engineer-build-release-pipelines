@@ -1,41 +1,58 @@
-name: $(Build.DefinitionName)_$(Date:yyyyMMdd)_$(Rev:.rrr)
+name: $(Build.DefinitionName)_$(Date:yyyyMMdd)_$(Rev:.r)
 
 trigger:
 - main
 
-pool:
-  vmImage: 'windows-latest'
+jobs:
+- job: PackageJob
+  displayName: 'Package Weatherforecast Api'
+  pool:
+    vmImage: 'windows-latest'
+  steps:
+  - task: UseDotNet@2
+    inputs:
+      packageType: 'sdk'
+      version: '8.x'
 
-steps:
-- task: UseDotNet@2
-  inputs:
-    packageType: 'sdk'
-    version: '8.x'
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      projects: '**/*.csproj'
 
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'restore'
-    projects: '**/*.csproj'
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'build'
+      projects: '**/*.csproj'
+      arguments: '--configuration Release'
 
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'build'
-    projects: '**/*.csproj'
-    arguments: '--configuration Release'
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'publish'
+      projects: 'Weatherforecast.Client/Weatherforecast.Client.csproj'
+      arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)/api-package'
 
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'publish'
-    projects: 'Weatherforecast.Client/Weatherforecast.Client.csproj'
-    arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)/api-package'
+- job: BuildTest
+  displayName: 'Build and Test Client'
+  pool:
+    vmImage: 'windows-latest'
+  steps:
+  - task: UseDotNet@2
+    inputs:
+      packageType: 'sdk'
+      version: '8.x'
 
-- task: PublishPipelineArtifact@1
-  inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)/api-package'
-    publishLocation: 'pipeline'
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      projects: '**/*.csproj'
 
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'test'
-    projects: '**/*.UnitTest.csproj'
-    arguments: '--configuration Release'
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Build.ArtifactStagingDirectory)/api-package'
+      publishLocation: 'pipeline'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'test'
+      projects: '**/*.UnitTest.csproj'
+      arguments: '--configuration Release'
