@@ -1,20 +1,11 @@
+name: $(Build.DefinitionName)_$(Date:yyyyMMdd)_$(Rev:.r)
+
+trigger:
 - main
 
 jobs:
-- job: PackageJob
-  displayName: 'Package Weatherforecast Api'
 - job: InitJob
   displayName: 'Weatherforecast Job'
-pool:
-vmImage: 'windows-latest'
-steps:
-@@ -30,29 +30,13 @@
-command: 'publish'
-projects: 'Weatherforecast.Client/Weatherforecast.Client.csproj'
-arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)/api-package'
-
-- job: BuildTest
-  displayName: 'Build and Test Client'
   pool:
     vmImage: 'windows-latest'
   steps:
@@ -28,13 +19,24 @@ arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)/a
       command: 'restore'
       projects: '**/*.csproj'
 
-- task: PublishPipelineArtifact@1
-inputs:
-targetPath: '$(Build.ArtifactStagingDirectory)/api-package'
-publishLocation: 'pipeline'
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'build'
+      projects: '**/*.csproj'
+      arguments: '--configuration Release'
 
-- task: DotNetCoreCLI@2
-inputs:
-command: 'test'
-projects: '**/*.UnitTest.csproj'
-arguments: '--configuration Release'
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'publish'
+      projects: 'Weatherforecast.Client/Weatherforecast.Client.csproj'
+      arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)/api-package'
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Build.ArtifactStagingDirectory)/api-package'
+      publishLocation: 'pipeline'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'test'
+      projects: '**/*.UnitTest.csproj'
+      arguments: '--configuration Release'
