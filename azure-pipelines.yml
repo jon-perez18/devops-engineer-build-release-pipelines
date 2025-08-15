@@ -54,5 +54,5 @@ jobs:
     displayName: 'dotnet test'
     inputs:
       command: test
-      projects: '$(ProjectToTest)'
-      arguments: ' **/*.UnitTest.csproj'
+      projects: '**/*.UnitTest.csproj'
+      arguments: '--configuration Release'
