@@ -2,41 +2,57 @@ name: $(Build.DefinitionName)_$(Date:yyyyMMdd)_$(Rev:.r)
 
 trigger:
 - main
+pool:
+    vmImage: 'windows-latest'
 
 jobs:
-- job: InitJob
-  displayName: 'Weatherforecast Job'
-  pool:
-    vmImage: 'windows-latest'
+- job: publish_artifact
+  displayName: 'Package Weatherforecast Api'
   steps:
   - task: UseDotNet@2
+    displayName: 'Use .NET Core SDK 8.x'
     inputs:
       packageType: 'sdk'
       version: '8.x'
 
   - task: DotNetCoreCLI@2
+    displayName: 'Restore .Net Core'
     inputs:
       command: 'restore'
       projects: '**/*.csproj'
 
   - task: DotNetCoreCLI@2
+    displayName: 'Build .NET Core'
     inputs:
       command: 'build'
       projects: '**/*.csproj'
       arguments: '--configuration Release'
-
   - task: DotNetCoreCLI@2
+    displayName: 'Dotnet Publish'
     inputs:
-      command: 'publish'
-      projects: 'Weatherforecast.Client/Weatherforecast.Client.csproj'
-      arguments: '--configuration Release --output $(Build.ArtifactStagingDirectory)/api-package'
+      command: publish
+      arguments: '--output $(Build.ArtifactStagingDirectory)/api-package --configuration Release'
   - task: PublishPipelineArtifact@1
+    displayName: 'Publish Pipeline Artifact'
     inputs:
       targetPath: '$(Build.ArtifactStagingDirectory)/api-package'
-      publishLocation: 'pipeline'
+      artifact: 'Weatherforecast Api'
 
-  - task: DotNetCoreCLI@2
+- job: build_and_test
+  displayName: 'Build and Test .NET 8 Application'
+  steps:
+  - task: UseDotNet@2
+    displayName: 'Use .NET Core sdk 8.x'
     inputs:
-      command: 'test'
-      projects: '**/*.UnitTest.csproj'
+      version: 8.x
+  - task: DotNetCoreCLI@2
+    displayName: 'dotnet build'
+    inputs:
+      projects: '**/*.csproj'
       arguments: '--configuration Release'
+  - task: DotNetCoreCLI@2
+    displayName: 'dotnet test'
+    inputs:
+      command: test
+      projects: '$(ProjectToTest)'
+      arguments: ' **/*.UnitTest.csproj'
